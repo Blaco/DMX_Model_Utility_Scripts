@@ -1,0 +1,1 @@
+"%VGame%\bin\dmxconvert.exe" -i %1 -of dmx -oe binary -o "%~dpn1.dmx"
