@@ -21,7 +21,8 @@ foreach ($File in $Files) {
 # The path *usually* points to the 'game' folder (parent folder of the bin folder)
 # Example for SFM: $VGameOverride = "C:\Program Files (x86)\Steam\steamapps\common\SourceFilmmaker\game\"
 # -------------------------------------------------------------------------------------------------------------
-$VGameOverride = "Z:\SteamLibrary\steamapps\common\Half-Life Alyx\game\"
+$VGameOverride = ""
+# $VGameOverride = "Z:\SteamLibrary\steamapps\common\Half-Life Alyx\game\"
 # -------------------------------------------------------------------------------------------------------------
 
 function Write-Separator1 { Write-Host "---------------------------------------------------------------------" }
@@ -141,10 +142,24 @@ Write-Host "///"
 Write-Host "$DetectedBranch"
 Write-Separator1
 
+# Function to clean up existing encoding formats in the file name
+function Remove-ExistingEncoding {
+	param (
+		[string]$FileName,
+		[array]$Encodings
+	)
+	# Sort encodings by length (descending) to ensure longest matches are prioritized
+	$Encodings = $Encodings | Sort-Object -Descending { $_.Length }
+	# Construct a regex pattern to match any of the encoding formats
+	$Pattern = "(_(?:{0}))" -f ($Encodings -join "|")
+	# Remove the matched encoding format (if found)
+	return $FileName -replace $Pattern, ""
+}
+
 # Process each file
 foreach ($File in $Files) {
-	Write-Host "Accepted files:"
-	Write-Host ($Files -join "`n")  # Joins all files with a newline for readability
+	# Display file name
+	Write-Host (($Files | ForEach-Object { Split-Path $_ -Leaf }) -join "`n")
     $FileContent = Get-Content $File -TotalCount 2
     $FirstLine = $FileContent[0]
     $SecondLine = $FileContent[1]
@@ -223,209 +238,200 @@ foreach ($File in $Files) {
         }
     }
 
-	# Case 2: Source 2 Formats
-	elseif ($FirstLine -match "model 22|dmx 22") {
-		# Ensure we can process Source 2 formats
-		Check-ResourceCompiler
+    # Case 2: Source 2 Formats
+    elseif ($FirstLine -match "model 22|dmx 22") {
+        # Ensure we can process Source 2 formats
+        Check-ResourceCompiler
+        # Determine the current format and set a beautified description
+        if ($FirstLine -match "keyvalues2_flat") {
+            $DisplayMessage = "KeyValues2 Flat -"
+            $CurrentEncode = "keyvalues2_flat"
+        } elseif ($FirstLine -match "keyvalues2_noids") {
+            $DisplayMessage = "KeyValues2 No IDs -"
+            $CurrentEncode = "keyvalues2_noids"
+        } elseif ($FirstLine -match "keyvalues2 4") {
+            $DisplayMessage = "KeyValues2 -"
+            $CurrentEncode = "keyvalues2"
+        } elseif ($FirstLine -match "binary 9|binary_seqids") {
+            $DisplayMessage = "Binary 9 - Sequenced IDs -"
+            $CurrentEncode = "binary_seqids"
+        } else {
+            $DisplayMessage = ""
+            $CurrentEncode = ""
+        }
+        # Extract the format and version from the header
+        if ($FirstLine -match "format (\w+)\s+(\d+)") {
+            $Format = $Matches[1]
+            $FormatVersion = $Matches[2]
+        } else {
+            Write-Host "WARNING: Failed to read format from the DMX header. Assuming 'Model 22'"
+            $Format = "model"
+            $FormatVersion = "22"
+        }
+        # Beautification of format
+        $Format = $Format.Substring(0, 1).ToUpper() + $Format.Substring(1).ToLower()
+        # Display detected format and encoding
+        Write-Host "..."
+        Write-Host "ModelDoc DMX ($DisplayMessage $Format $FormatVersion - Source 2)"
+        # Define available formats with beautified descriptions
+        $AvailableEncodes = @(
+            @{ Key = "keyvalues2_noids"; Display = "KeyValues2 (No IDs)" },
+            @{ Key = "binary_seqids"; Display = "Binary 9 (Sequenced IDs)" },
+            @{ Key = "keyvalues2"; Display = "KeyValues2" },
+            @{ Key = "keyvalues2_flat"; Display = "KeyValues2 Flat" }
+        )
+        # Filter out the current detected format
+        $Options = $AvailableEncodes | Where-Object { $_.Key -ne $CurrentEncode }
+        # Prompt the user to choose the output format
+        while ($true) {
+            Write-Separator2
+            Write-Host "Choose a format to convert to:"
+            for ($i = 0; $i -lt $Options.Count; $i++) {
+                Write-Host "$($i + 1) - $($Options[$i].Display)"
+            }
+            $Choice = Read-Host "Enter your choice (1-$($Options.Count))"
+            if ($Choice -ge 1 -and $Choice -le $Options.Count) {
+                $OutputFormat = $Options[$Choice - 1].Key
+                $NewExtension = ".dmx"
+                break
+            } else {
+                Write-Host "Invalid choice. Please enter a valid number between 1 and $($Options.Count)."
+            }
+        }
+        Write-Separator2
+        Write-Host "Choose the output behavior:"
+        Write-Host "1 - Overwrite existing files"
+        Write-Host "2 - Create new files"
+        Write-Separator2
+        while ($true) {
+            $Choice = Read-Host "Enter your choice (1 or 2)"
+            if ($Choice -eq "1" -or $Choice -eq "2") { break }
+            Write-Host "Invalid choice. Please enter '1' or '2'."
+        }
+        # Define a list of encoding formats to handle (longest to shortest to prioritize)
+        $EncodingFormats = @("binary_seqids", "keyvalues2_flat", "keyvalues2_noids", "keyvalues2", "binary")
+        # Updated output file logic
+        if ($Choice -eq "1") {
+            $CleanedFileName = Remove-ExistingEncoding -FileName $File -Encodings $EncodingFormats
+            $OutputFile = if ($File -ne $CleanedFileName) {
+                # Detected existing encoding; switch to Choice 2 logic
+                if ($CleanedFileName -match "(\.\w+)$") {
+                    $CleanedFileName -replace "(\.\w+)$", "_$OutputFormat$NewExtension"
+                } else {
+                    # Handle files with no extensions gracefully
+                    "$CleanedFileName_$OutputFormat$NewExtension"
+                }
+            } else {
+                $File
+            }
+        } else {
+            $CleanedFileName = Remove-ExistingEncoding -FileName $File -Encodings $EncodingFormats
+            $OutputFile = if ($CleanedFileName -match "(\.\w+)$") {
+                $CleanedFileName -replace "(\.\w+)$", "_$OutputFormat$NewExtension"
+            } else {
+                "$CleanedFileName_$OutputFormat$NewExtension"
+            }
+        }
+        & $DmxConvertPath -i $File -o $OutputFile -oe $OutputFormat -of model 2>&1 | Out-Null
+        if (Test-Path $OutputFile) {
+            Write-Host "Conversion complete: $(Split-Path $OutputFile -Leaf)`n"
+            if ($Choice -eq "1" -and $File -ne $OutputFile) {
+                Remove-Item -Path $File -Force
+            }
+        }
+        else {
+            Write-Host "ERROR: Conversion failed for '$(Split-Path $File -Leaf)'`n"
+        }
+    }
 
-		# Determine the current format and set a beautified description
-		if ($FirstLine -match "keyvalues2_flat") {
-			$DisplayMessage = "KeyValues2 Flat -"
-			$CurrentEncode = "keyvalues2_flat"
-		} elseif ($FirstLine -match "keyvalues2_noids") {
-			$DisplayMessage = "KeyValues2 No IDs -"
-			$CurrentEncode = "keyvalues2_noids"
-		} elseif ($FirstLine -match "keyvalues2 4") {
-			$DisplayMessage = "KeyValues2 -"
-			$CurrentEncode = "keyvalues2"
-		} elseif ($FirstLine -match "binary 9|binary_seqids") {
-			$DisplayMessage = "Binary 9 - Sequenced IDs -"
-			$CurrentEncode = "binary_seqids"
-		} else {
-			$DisplayMessage = ""
-			$CurrentEncode = ""
-		}
-
-		# Extract the format and version from the header
-		if ($FirstLine -match "format (\w+)\s+(\d+)") {
-			$Format = $Matches[1]
-			$FormatVersion = $Matches[2]
-		} else {
-			Write-Host "WARNING: Failed to read format from the DMX header. Assuming 'model 22'"
-			$Format = "model"
-			$FormatVersion = "22"
-		}
-
-		# Beautification of format
-		$Format = $Format.Substring(0, 1).ToUpper() + $Format.Substring(1).ToLower()
-
-		# Display detected format and encoding
-		Write-Host "$(Split-Path $File -Leaf)"
-		Write-Host "..."
-		Write-Host "ModelDoc DMX ($DisplayMessage $Format $FormatVersion - Source 2)"
-
-		# Define available formats with beautified descriptions
-		$AvailableEncodes = @(
-			@{ Key = "keyvalues2_noids"; Display = "KeyValues2 (No IDs)" },
-			@{ Key = "binary_seqids"; Display = "Binary 9 (Sequenced IDs)" },
-			@{ Key = "keyvalues2"; Display = "KeyValues2" },
-			@{ Key = "keyvalues2_flat"; Display = "KeyValues2 Flat" }
-		)
-
-		# Filter out the current detected format
-		$Options = $AvailableEncodes | Where-Object { $_.Key -ne $CurrentEncode }
-
-		# Prompt the user to choose the output format
-		while ($true) {
-			Write-Separator2
-			Write-Host "Choose a format to convert to:"
-			for ($i = 0; $i -lt $Options.Count; $i++) {
-				Write-Host "$($i + 1) - $($Options[$i].Display)"
-			}
-			$Choice = Read-Host "Enter your choice (1-$($Options.Count))"
-			if ($Choice -ge 1 -and $Choice -le $Options.Count) {
-				$OutputFormat = $Options[$Choice - 1].Key
-				$NewExtension = ".dmx"
-				break
-			} else {
-				Write-Host "Invalid choice. Please enter a valid number between 1 and $($Options.Count)."
-			}
-		}
-
-		# Updated output behavior based on format
-		Write-Separator2
-		Write-Host "Choose the output behavior:"
-		Write-Host "1 - Overwrite existing files"
-		Write-Host "2 - Create new files"
-		Write-Separator2
-		while ($true) {
-			$Choice = Read-Host "Enter your choice (1 or 2)"
-			if ($Choice -eq "1" -or $Choice -eq "2") { break }
-			Write-Host "Invalid choice. Please enter '1' or '2'."
-		}
-
-		# Define a list of encoding formats to handle (longest to shortest to prioritize)
-		$EncodingFormats = @("binary_seqids", "keyvalues2_flat", "keyvalues2_noids", "keyvalues2", "binary")
-
-		# Function to clean up existing encoding formats in the file name
-		function Remove-ExistingEncoding {
-			param (
-				[string]$FileName,
-				[array]$Encodings
-			)
-			# Sort encodings by length (descending) to ensure longest matches are prioritized
-			$Encodings = $Encodings | Sort-Object -Descending { $_.Length }
-			# Construct a regex pattern to match any of the encoding formats
-			$Pattern = "(_(?:{0}))" -f ($Encodings -join "|")
-			# Remove the matched encoding format (if found)
-			return $FileName -replace $Pattern, ""
-		}
-
-		# Updated output file logic
-		if ($Choice -eq "1") {
-			$CleanedFileName = Remove-ExistingEncoding -FileName $File -Encodings $EncodingFormats
-			$OutputFile = if ($File -ne $CleanedFileName) {
-				# Detected existing encoding; switch to Choice 2 logic
-				if ($CleanedFileName -match "(\.\w+)$") {
-					$CleanedFileName -replace "(\.\w+)$", "_$OutputFormat$NewExtension"
-				} else {
-					# Handle files with no extensions gracefully
-					"$CleanedFileName_$OutputFormat$NewExtension"
-				}
-			} else {
-				$File
-			}
-		} else {
-			$CleanedFileName = Remove-ExistingEncoding -FileName $File -Encodings $EncodingFormats
-			$OutputFile = if ($CleanedFileName -match "(\.\w+)$") {
-				$CleanedFileName -replace "(\.\w+)$", "_$OutputFormat$NewExtension"
-			} else {
-				"$CleanedFileName_$OutputFormat$NewExtension"
-			}
-		}
-	}
-
-	# Case 3: All Others
-	elseif ($FirstLine -match "keyvalues2|keyvalues2_flat|binary") {
-		$EncodingMatch = $Matches[0]
-		# Beautify the encoding format or default to "Unknown"
-		switch ($EncodingMatch) {
-			"keyvalues2" { $BeautifiedEncoding = "KeyValues2" }
-			"keyvalues2_flat" { $BeautifiedEncoding = "KeyValues2 Flat" }
-			"binary" { $BeautifiedEncoding = "Binary" }
-			default { $BeautifiedEncoding = "Unknown" }
-		}
-
-		# Extract the format from the header
-		if ($FirstLine -match "format (\w+)") {
-			$Format = $Matches[1]
-		} else {
-			Write-Host "ERROR: Could not extract format from the DMX header in '$(Split-Path $File -Leaf)'"
-			continue
-		}
-
-		# Detect DMX format
-		if ($FirstLine -match "model 1|dmx 1") {
-			$DisplayMessage = "$BeautifiedEncoding (DMX Format 1)"
-		} elseif ($FirstLine -match "model 15|dmx 15") {
-			$DisplayMessage = "$BeautifiedEncoding (DMX Format 15)"
-		} elseif ($FirstLine -match "model 18|dmx 18") {
-			$DisplayMessage = "$BeautifiedEncoding (DMX Format 18)"
-		} else {
-			Write-Host "ERROR: Unsupported file format for '$(Split-Path $File -Leaf)'`n"
-			continue
-		}
-
-		# Display detected format
-		Write-Host "Input File Type: $DisplayMessage"
-		Write-Host "Detected Format: $Format"
-
-		# Prompt the user for the desired output format
-		$Options = @("keyvalues2", "keyvalues2_flat", "binary") -ne $EncodingMatch
-		Write-Separator2
-		Write-Host "Choose a format to convert to:"
-		for ($i = 0; $i -lt $Options.Count; $i++) {
-			switch ($Options[$i]) {
-				"keyvalues2" { $OptionBeautified = "KeyValues2" }
-				"keyvalues2_flat" { $OptionBeautified = "KeyValues2 Flat" }
-				"binary" { $OptionBeautified = "Binary" }
-				default { $OptionBeautified = "Unknown" }
-			}
-			Write-Host "$($i + 1) - $OptionBeautified"
-		}
-		while ($true) {
-			$Choice = Read-Host "Enter your choice (1-$($Options.Count))"
-			if ($Choice -ge 1 -and $Choice -le $Options.Count) {
-				$OutputFormat = $Options[$Choice - 1]
-				$NewExtension = ".dmx"
-				break
-			} else {
-				Write-Host "Invalid choice. Please enter a valid number between 1 and $($Options.Count)."
-			}
-		}
-
-		# Updated output behavior
-		Write-Separator2
-		Write-Host "Choose the output behavior:"
-		Write-Host "1 - Overwrite existing files"
-		Write-Host "2 - Create new files"
-		Write-Separator2
-		while ($true) {
-			$Choice = Read-Host "Enter your choice (1 or 2)"
-			if ($Choice -eq "1" -or $Choice -eq "2") { break }
-			Write-Host "Invalid choice. Please enter '1' or '2'."
-		}
-
-		# Run dmxconvert.exe with the returned parameters and format
-		& $DmxConvertPath -i $File -o $OutputFile -oe $OutputFormat -of $Format 2>&1 | Out-Null
-
-		if (Test-Path $OutputFile) {
-			Write-Host "Conversion complete: $(Split-Path $OutputFile -Leaf)"
-			if ($Choice -eq "1" -and $File -ne $OutputFile) {
-				Remove-Item -Path $File -Force
-			}
-		} else {
-			Write-Host "ERROR: Conversion failed for '$(Split-Path $File -Leaf)'"
-		}
-	}
+    # Case 3: All Others
+    elseif ($FirstLine -match "keyvalues2|keyvalues2_flat|binary") {
+        $EncodingMatch = $Matches[0]
+        # Beautify the encoding format or default to "Unknown"
+        switch ($EncodingMatch) {
+            "keyvalues2" { $BeautifiedEncoding = "KeyValues2" }
+            "keyvalues2_flat" { $BeautifiedEncoding = "KeyValues2 Flat" }
+            "binary" { $BeautifiedEncoding = "Binary" }
+            default { $BeautifiedEncoding = "Unknown" }
+        }
+        # Extract the format from the header
+        if ($FirstLine -match "format (\w+)") {
+            $Format = $Matches[1]
+        } else {
+            Write-Host "ERROR: Could not extract format from the DMX header in '$(Split-Path $File -Leaf)'"
+            continue
+        }
+        # Detect DMX format
+        if ($FirstLine -match "model 1|dmx 1") {
+            $DisplayMessage = "$BeautifiedEncoding (DMX Format 1)"
+        } elseif ($FirstLine -match "model 15|dmx 15") {
+            $DisplayMessage = "$BeautifiedEncoding (DMX Format 15)"
+        } elseif ($FirstLine -match "model 18|dmx 18") {
+            $DisplayMessage = "$BeautifiedEncoding (DMX Format 18)"
+        } else {
+            Write-Host "ERROR: Unsupported file format for '$(Split-Path $File -Leaf)'`n"
+            continue
+        }
+        # Display detected format
+        Write-Host "..."
+        Write-Host "Input File Type: $DisplayMessage"
+        # Prompt the user for the desired output format
+        $Options = @("keyvalues2", "keyvalues2_flat", "binary") | Where-Object { $_ -ne $EncodingMatch }
+        Write-Separator2
+        Write-Host "Choose a format to convert to:"
+        for ($i = 0; $i -lt $Options.Count; $i++) {
+            switch ($Options[$i]) {
+                "keyvalues2" { $OptionBeautified = "KeyValues2" }
+                "keyvalues2_flat" { $OptionBeautified = "KeyValues2 Flat" }
+                "binary" { $OptionBeautified = "Binary" }
+                default { $OptionBeautified = "Unknown" }
+            }
+            Write-Host "$($i + 1) - $OptionBeautified"
+        }
+        while ($true) {
+            $Choice = Read-Host "Enter your choice (1-$($Options.Count))"
+            if ($Choice -ge 1 -and $Choice -le $Options.Count) {
+                $OutputFormat = $Options[$Choice - 1]
+                $NewExtension = ".dmx"
+                break
+            } else {
+                Write-Host "Invalid choice. Please enter a valid number between 1 and $($Options.Count)."
+            }
+        }
+        Write-Separator2
+        Write-Host "Choose the output behavior:"
+        Write-Host "1 - Overwrite existing files"
+        Write-Host "2 - Create new files"
+        Write-Separator2
+        while ($true) {
+            $Choice = Read-Host "Enter your choice (1 or 2)"
+            if ($Choice -eq "1" -or $Choice -eq "2") { break }
+            Write-Host "Invalid choice. Please enter '1' or '2'."
+        }
+        # Compute the output file name for Case 3
+        $EncodingFormats = @("binary_seqids", "keyvalues2_flat", "keyvalues2_noids", "keyvalues2")
+        $CleanedFileName = Remove-ExistingEncoding -FileName $File -Encodings $EncodingFormats
+        if ($Choice -eq "1") {
+            if ($CleanedFileName -match "(\.\w+)$") {
+                $OutputFile = $CleanedFileName -replace "(\.\w+)$", "_$OutputFormat$NewExtension"
+            } else {
+                $OutputFile = "$CleanedFileName_$OutputFormat$NewExtension"
+            }
+        } else {
+            if ($CleanedFileName -match "(\.\w+)$") {
+                $OutputFile = $CleanedFileName -replace "(\.\w+)$", "_$OutputFormat$NewExtension"
+            } else {
+                $OutputFile = "$CleanedFileName_$OutputFormat$NewExtension"
+            }
+        }
+        & $DmxConvertPath -i $File -o $OutputFile -oe $OutputFormat -of model 2>&1 | Out-Null
+        if (Test-Path $OutputFile) {
+            Write-Host "Conversion complete: $(Split-Path $OutputFile -Leaf)"
+            if ($Choice -eq "1" -and $File -ne $OutputFile) {
+                Remove-Item -Path $File -Force
+            }
+        } else {
+            Write-Host "ERROR: Conversion failed for '$(Split-Path $File -Leaf)'"
+        }
+    }
 }
