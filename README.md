@@ -4,7 +4,7 @@ These scripts automatically remove or transfer flex controller and dominator rul
 
 An additional script utilizes the Dmxconvert command line tool, automatically detecting your Source 1 (or 2) branch and the format of your provided DMX files in order to provide options in a GUI interface that simply allow you to choose what format you wish to convert to without the need for manual specification of the tool's required parameters. \
 
-### Only supports Model formats and SFM Elements/Presets (.pre) !
+### Dmxconvert script only supports Model formats and SFM Elements/Presets (.pre) !
 
 *Just drag and drop your files on to the script and select what you want Dmxconvert to do.*
 
