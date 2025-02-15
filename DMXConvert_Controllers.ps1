@@ -272,7 +272,7 @@ foreach ($File in $Files) {
         $Format = $Format.Substring(0, 1).ToUpper() + $Format.Substring(1).ToLower()
         # Display detected format and encoding
         Write-Host "..."
-        Write-Host "ModelDoc DMX ($DisplayMessage $Format $FormatVersion - Source 2)"
+        Write-Host "Input File Type: ModelDoc DMX ($DisplayMessage $Format $FormatVersion - Source 2)"
         # Define available formats with beautified descriptions
         $AvailableEncodes = @(
             @{ Key = "keyvalues2_noids"; Display = "KeyValues2 (No IDs)" },
