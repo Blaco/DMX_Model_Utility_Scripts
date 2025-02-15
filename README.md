@@ -15,8 +15,8 @@ Currently only supports processing one file at a time.
 1. Drag a DMX file on to the batch, the tool will check your VGame path to locate Dmxconvert.exe \
    *You can manually override the VGame environment variable at the top of the Powershell script
 2. The script will automatically detect the Source Engine branch and DMX file encoding to determine choices \
-   *The script will also detect if you gave it a SFM Preset .pre file that was not converted properly, and offer to fix it for you
-3. Choose the new encoding format you want to convert to, and choose to output to a new file or overwrite the original
+   *The script will also detect if you gave it an improperly converted SFM Preset file, and offer to fix it for you
+3. Choose a new encoding format you want to convert to, and choose to output to a new file or overwrite the original
 4. The script will run Dmxconvert.exe according to your input, and save the output
 
 ## Remove_Controllers.ps1
