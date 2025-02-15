@@ -16,8 +16,9 @@ Currently only supports processing one file at a time.
    *You can manually override the VGame environment variable at the top of the Powershell script
 2. The script will automatically detect the Source Engine branch and DMX file encoding to determine choices \
    *The script will also detect if you gave it an improperly converted SFM Preset file, and offer to fix it for you
-3. Choose a new encoding format you want to convert to, and choose to output to a new file or overwrite the original
-4. The script will run Dmxconvert.exe according to your input, and save the output
+3. Choose a new encoding format you want to convert to from a list of automatically filtered options
+4. Choose whether to output to a new file or overwrite the original file directly, the file will be renamed
+5. The script will run Dmxconvert.exe according to your input, and save the output
 
 ## Remove_Controllers.ps1
 Strips all flex controllers and flex dominator rules out of a KeyValues 2 DMX file. \
