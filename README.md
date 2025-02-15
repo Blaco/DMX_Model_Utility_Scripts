@@ -9,13 +9,13 @@ An additional script utilizes the Dmxconvert command line tool, automatically de
 *Just drag and drop your files on to the script and select what you want Dmxconvert to do.*
 
 ## DMXConvert_Controllers.ps1
-Provides an automated interface for using Dmxconvert without the need for command line parameters or batch files
+Provides an automated interface for using Dmxconvert without the need for command line parameters or batch files. \
 Currently only supports processing one file at a time.
 
-1. Drag a DMX file on to the batch file, the tool will check your VGame path to determine your Dmxconvert.exe capabilities \
-   *If your VGame environment variable is not set right, you can manually override it at the top of the Powershell script
-2. The script will automatically detect your Source Engine branch and DMX file encoding and give you specific options to choose from \
-   *The script also will detect if you gave it a SFM Preset .pre file that was not converted properly, and offer to fix it for you
+1. Drag a DMX file on to the batch, the tool will check your VGame path to locate Dmxconvert.exe \
+   *You can manually override the VGame environment variable at the top of the Powershell script
+2. The script will automatically detect the Source Engine branch and DMX file encoding to determine choices \
+   *The script will also detect if you gave it a SFM Preset .pre file that was not converted properly, and offer to fix it for you
 3. Choose the new encoding format you want to convert to, and choose to output to a new file or overwrite the original
 4. The script will run Dmxconvert.exe according to your input, and save the output
 
@@ -23,7 +23,7 @@ Currently only supports processing one file at a time.
 Strips all flex controllers and flex dominator rules out of a KeyValues 2 DMX file. \
 The primary purpose of this script is to prepare a DMX file for controller injection from another source, via Transfer_Controllers.ps1
 
-1.  Drag a KeyValues2 DMX file onto the batch file to remove its embedded controllers and dominators
+1.  Drag a KeyValues2 DMX file onto the batch to remove its embedded controllers and dominators
 2.  The script will save the new version of the file with _stripped appended to the name
 
 ## Transfer_Controllers.ps1
