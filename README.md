@@ -1,5 +1,5 @@
-# DMX_KV2_Controller_Tools
-Powershell scripts to automate the processing of Source 1 DMX files. \
+# DMX_Model_Controller_Tools
+Powershell scripts to automate the processing of Source Engine DMX files. \
 These scripts automatically remove or transfer flex controller and dominator rule datablocks in KeyValues2 DMX files.
 
 An additional script utilizes the Dmxconvert command line tool, automatically detecting your Source 1 (or 2) branch and the format of your provided DMX files in order to provide options in a GUI interface that simply allow you to choose what format you wish to convert to without the need for manual specification of the tool's required parameters.
