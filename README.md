@@ -2,7 +2,7 @@
 Powershell scripts to automate the processing of Source Engine DMX files. \
 These scripts automatically remove or transfer flex controller and dominator rule datablocks in KeyValues2 DMX files.
 
-An additional script utilizes the Dmxconvert command line tool, automatically detecting your Source 1 (or 2) branch and the format of your provided DMX files in order to provide options in a GUI interface that simply allow you to choose what format you wish to convert to without the need for manual specification of the tool's required parameters. \
+An additional script utilizes the Dmxconvert command line tool, automatically detecting your Source 1 (or 2) branch and the format of your provided DMX files in order to provide options in a GUI interface that simply allow you to choose what format you wish to convert to without the need for manual specification of the tool's required parameters.
 
 ### Dmxconvert script only supports Model formats and SFM Elements/Presets (.pre) !
 
