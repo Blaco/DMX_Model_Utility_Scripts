@@ -1,4 +1,4 @@
-# DMX_KV2_Controller_Tools
+# DMX Model Utility Scripts
 Powershell scripts to automate the processing of Source Engine DMX model files. \
 These scripts automatically remove or transfer flex controller and dominator rule datablocks in KeyValues2 DMX files.
 
