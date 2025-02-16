@@ -143,7 +143,7 @@ if ($files.Count -eq 2) {
         # Loop until a valid choice is entered
         $validInput = $false
         do {
-            $choice = Read-Host "Enter your choice"
+            $choice = Read-Host "Enter your choice (1-2)"
             if ($choice -eq "1") {
                 $filledFile = $files[1]
                 $strippedFile = $files[0]
@@ -247,7 +247,7 @@ while (-not $validChoice) {
 	Write-Host "2 - Overwrite the 'stripped' file with a 'filled' file"
 	Write-Host "3 - Overwrite the original DMX file and keep the 'stripped' file"
 	Write-Host "4 - Overwrite the original DMX file and delete the 'stripped' file`r`n"
-    $option = Read-Host "Enter your choice"
+    $option = Read-Host "Enter your choice (1-4)"
 	Write-Host "-------------------------------------------------------------------------------------------------------------"
     
     switch ($option) {
