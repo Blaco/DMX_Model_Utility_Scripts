@@ -20,7 +20,10 @@ Currently only supports processing one file at a time.
 4. Choose whether to output to a new file or overwrite the original file directly, the file will be renamed
 5. The script will run Dmxconvert.exe according to your input, and save the output
 
-      <img src="https://i.imgur.com/5ld56eS.png">
+      <img src="https://i.imgur.com/zH10QDq.png">
+     
+
+      <img src="https://i.imgur.com/sIn8xoR.png">
 
 ## Remove_Controllers.ps1
 Strips all flex controllers and flex dominator rules out of a KeyValues 2 DMX file. \
